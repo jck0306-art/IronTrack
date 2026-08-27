@@ -1,4 +1,4 @@
-import { initFirebase } from './firebase.js';
+import { initFirebase } from './firebase.js'; 
 import { renderIntakeView, toggleTodayIntake, toggleDateIntake, changeCalendarMonth } from './intake.js';
 import { renderLabView, switchChartMetric, openLabModal, closeLabModal, saveLabRecord, deleteLabRecord } from './lab.js';
 
