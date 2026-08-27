@@ -1,4 +1,4 @@
-import { ironData, syncData } from './firebase.js';
+import { ironData, syncData } from './firebase.js'; 
 
 let chartInstance = null;
 let currentMetric = 'ferritin'; // 'ferritin' | 'hb'
