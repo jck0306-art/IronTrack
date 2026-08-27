@@ -1,4 +1,4 @@
-import { ironData, syncData } from './firebase.js';
+import { ironData, syncData } from './firebase.js'; 
 
 let viewYear = new Date().getFullYear();
 let viewMonth = new Date().getMonth(); // 0 ~ 11
