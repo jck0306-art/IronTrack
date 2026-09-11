@@ -4,6 +4,7 @@ import {
   renderLabView, switchChartMetric, openLabModal, closeLabModal, saveLabRecord, deleteLabRecord,
   openMetricsManageModal, closeMetricsManageModal, updateMetricProp, addNewMetricPrompt, deleteMetric
 } from './lab.js';
+import { initAuthGuard, logoutAdmin } from './security.js';
 
 function render() {
   renderIntakeView();
@@ -29,6 +30,12 @@ window.updateMetricProp = (idx, prop, val) => updateMetricProp(idx, prop, val, r
 window.addNewMetricPrompt = () => addNewMetricPrompt(render);
 window.deleteMetric = idx => deleteMetric(idx, render);
 
+// 관리자 로그아웃 전역 바인딩
+window.logoutAdmin = logoutAdmin;
+
+// 🌟 로그인 인증 확인 후 안전하게 Firebase DB 로드
 window.addEventListener('DOMContentLoaded', () => {
-  initFirebase(render);
+  initAuthGuard(false, () => {
+    initFirebase(render);
+  });
 });
