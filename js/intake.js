@@ -29,7 +29,7 @@ export function renderIntakeView() {
     }
   }
 
-  // 스트릭 & 당월 / 1개월 / 2개월 복용율 계산
+  // 🌟 선택된 달(viewYear, viewMonth) 기준으로 통계 계산
   calculateStats();
 
   // 달력 렌더링
@@ -47,11 +47,13 @@ export function toggleDateIntake(dateKey, onRender) {
   syncData(onRender);
 }
 
+// 🌟 선택된 연/월 기준으로 복용률 및 라벨 동적 계산
 function calculateStats() {
   const intakes = ironData.intakes || {};
   const today = new Date();
+  const isCurrentMonthView = (viewYear === today.getFullYear() && viewMonth === today.getMonth());
 
-  // 1. 연속 복용 스트릭 계산
+  // 1. 연속 복용 스트릭 계산 (현재 실제 오늘 기준 유지)
   let streak = 0;
   let checkDate = new Date();
   const todayKey = getTodayKey();
@@ -74,25 +76,43 @@ function calculateStats() {
   const streakEl = document.getElementById('current-streak');
   if (streakEl) streakEl.innerText = `${streak}일째 🔥`;
 
-  // 2. 당월 복용률 (1일 ~ 오늘 기준)
+  // 2. 기준일 설정 (현재 달이면 오늘까지, 과거나 미래면 해당 월의 마지막 날 기준)
+  let baseDate;
+  let totalDaysInMonthView;
+  let daysToCount;
+
+  if (isCurrentMonthView) {
+    baseDate = new Date(); // 오늘
+    daysToCount = today.getDate(); // 1일 ~ 오늘
+  } else {
+    // 해당 월의 마지막 날 구하기
+    totalDaysInMonthView = new Date(viewYear, viewMonth + 1, 0).getDate();
+    baseDate = new Date(viewYear, viewMonth, totalDaysInMonthView);
+    daysToCount = totalDaysInMonthView; // 1일 ~ 말일
+  }
+
+  // 3. 해당 월 복용률 계산
   let monthTaken = 0;
-  const currentDay = today.getDate();
-  for (let day = 1; day <= currentDay; day++) {
-    const k = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  for (let day = 1; day <= daysToCount; day++) {
+    const k = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     if (intakes[k]) monthTaken++;
   }
-  const monthRate = Math.round((monthTaken / currentDay) * 100) || 0;
+  const monthRate = Math.round((monthTaken / daysToCount) * 100) || 0;
+  
   const monthRateEl = document.getElementById('month-rate');
   if (monthRateEl) {
     monthRateEl.innerText = `${monthRate}%`;
-    monthRateEl.title = `당월 ${monthTaken}/${currentDay}일 복용`;
+    monthRateEl.title = `${viewMonth + 1}월 ${monthTaken}/${daysToCount}일 복용`;
+    // 라벨 텍스트 변경 (예: "당월 복용률" -> "8월 복용률")
+    const labelEl = monthRateEl.previousElementSibling;
+    if (labelEl) labelEl.innerText = isCurrentMonthView ? '당월 복용률' : `${viewMonth + 1}월 복용률`;
   }
 
-  // 3. 최근 1개월(30일) 복용율
+  // 4. 기준일로부터 최근 1개월(30일) 복용율
   let count1M = 0;
   for (let i = 0; i < 30; i++) {
-    const target = new Date();
-    target.setDate(today.getDate() - i);
+    const target = new Date(baseDate);
+    target.setDate(baseDate.getDate() - i);
     const k = `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, '0')}-${String(target.getDate()).padStart(2, '0')}`;
     if (intakes[k]) count1M++;
   }
@@ -100,14 +120,14 @@ function calculateStats() {
   const rate1MEl = document.getElementById('rate-1month');
   if (rate1MEl) {
     rate1MEl.innerText = `${rate1M}%`;
-    rate1MEl.title = `최근 30일 중 ${count1M}일 복용`;
+    rate1MEl.title = `기준일(${formatDate(baseDate)}) 직전 30일 중 ${count1M}일 복용`;
   }
 
-  // 4. 최근 2개월(60일) 복용율
+  // 5. 기준일로부터 최근 2개월(60일) 복용율
   let count2M = 0;
   for (let i = 0; i < 60; i++) {
-    const target = new Date();
-    target.setDate(today.getDate() - i);
+    const target = new Date(baseDate);
+    target.setDate(baseDate.getDate() - i);
     const k = `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, '0')}-${String(target.getDate()).padStart(2, '0')}`;
     if (intakes[k]) count2M++;
   }
@@ -115,8 +135,15 @@ function calculateStats() {
   const rate2MEl = document.getElementById('rate-2month');
   if (rate2MEl) {
     rate2MEl.innerText = `${rate2M}%`;
-    rate2MEl.title = `최근 60일 중 ${count2M}일 복용`;
+    rate2MEl.title = `기준일(${formatDate(baseDate)}) 직전 60일 중 ${count2M}일 복용`;
   }
+}
+
+function formatDate(d) {
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
 export function changeCalendarMonth(delta, onRender) {
@@ -128,7 +155,10 @@ export function changeCalendarMonth(delta, onRender) {
     viewMonth = 0;
     viewYear++;
   }
+
+  // 🌟 달력 이동 시 달력과 상단 통계 수치를 함께 새로고침
   renderCalendar();
+  calculateStats();
 }
 
 function renderCalendar() {
