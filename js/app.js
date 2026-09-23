@@ -9,15 +9,12 @@ import { initAuthGuard, logoutAdmin } from './security.js';
 function render() {
   renderIntakeView();
   renderLabView();
-  import { renderThreeMonthHistory } from './tracker.js';
+  import { renderThreeMonthHistory } from './tracker.js'; // ❌ 함수 내부에서 import 사용 불가 (문법 오류)
 
-function render() {
-  // 기존 통계 및 달력 렌더링 코드...
-  
-  // 🌟 최근 3개월 히스토리 및 복용율 갱신 추가
-  const records = cloudData.records || {}; // 저장소 구조에 맞게 연결
-  window.ironRecords = records;
-  renderThreeMonthHistory(records);
+function render() { // ❌ render 함수 중복 선언
+  // ...
+  const records = cloudData.records || {}; // ❌ IronTrack의 데이터 변수는 ironData.intakes 임
+  // ...
 }
 }
 
