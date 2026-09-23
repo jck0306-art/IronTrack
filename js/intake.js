@@ -47,13 +47,13 @@ export function toggleDateIntake(dateKey, onRender) {
   syncData(onRender);
 }
 
-// 🌟 선택된 연/월 기준으로 복용률 및 라벨 동적 계산
+// 🌟 온전한 달력 '월(1일 ~ 말일)' 기준으로 복용률 계산
 function calculateStats() {
   const intakes = ironData.intakes || {};
   const today = new Date();
   const isCurrentMonthView = (viewYear === today.getFullYear() && viewMonth === today.getMonth());
 
-  // 1. 연속 복용 스트릭 계산 (현재 실제 오늘 기준 유지)
+  // 1. 연속 복용 스트릭 계산 (오늘 기준)
   let streak = 0;
   let checkDate = new Date();
   const todayKey = getTodayKey();
@@ -76,66 +76,52 @@ function calculateStats() {
   const streakEl = document.getElementById('current-streak');
   if (streakEl) streakEl.innerText = `${streak}일째 🔥`;
 
-  // 2. 기준일 설정 (현재 달이면 오늘까지, 과거나 미래면 해당 월의 마지막 날 기준)
-  let baseDate;
-  let totalDaysInMonthView;
-  let daysToCount;
+  // 🌟 특정 연/월의 온전한 1일 ~ 말일 복용율을 계산하는 헬퍼 함수
+  function getMonthStats(targetYear, targetMonthIndex, isCurrent) {
+    const totalDays = new Date(targetYear, targetMonthIndex + 1, 0).getDate();
+    // 현재 이번 달을 보고 있다면 오늘 날짜까지만 분모로 계산, 지난달은 말일까지 계산
+    const daysToCount = isCurrent ? today.getDate() : totalDays;
 
-  if (isCurrentMonthView) {
-    baseDate = new Date(); // 오늘
-    daysToCount = today.getDate(); // 1일 ~ 오늘
-  } else {
-    // 해당 월의 마지막 날 구하기
-    totalDaysInMonthView = new Date(viewYear, viewMonth + 1, 0).getDate();
-    baseDate = new Date(viewYear, viewMonth, totalDaysInMonthView);
-    daysToCount = totalDaysInMonthView; // 1일 ~ 말일
+    let takenCount = 0;
+    for (let day = 1; day <= daysToCount; day++) {
+      const k = `${targetYear}-${String(targetMonthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      if (intakes[k]) takenCount++;
+    }
+
+    const rate = Math.round((takenCount / daysToCount) * 100) || 0;
+    return { rate, takenCount, daysToCount, monthNum: targetMonthIndex + 1 };
   }
 
-  // 3. 해당 월 복용률 계산
-  let monthTaken = 0;
-  for (let day = 1; day <= daysToCount; day++) {
-    const k = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    if (intakes[k]) monthTaken++;
-  }
-  const monthRate = Math.round((monthTaken / daysToCount) * 100) || 0;
-  
+  // 2. 기준 월 (현재 보고 있는 달: 예: 9월)
+  const baseStats = getMonthStats(viewYear, viewMonth, isCurrentMonthView);
   const monthRateEl = document.getElementById('month-rate');
   if (monthRateEl) {
-    monthRateEl.innerText = `${monthRate}%`;
-    monthRateEl.title = `${viewMonth + 1}월 ${monthTaken}/${daysToCount}일 복용`;
-    // 라벨 텍스트 변경 (예: "당월 복용률" -> "8월 복용률")
+    monthRateEl.innerText = `${baseStats.rate}%`;
+    monthRateEl.title = `${baseStats.monthNum}월 ${baseStats.takenCount}/${baseStats.daysToCount}일 복용`;
     const labelEl = monthRateEl.previousElementSibling;
-    if (labelEl) labelEl.innerText = isCurrentMonthView ? '당월 복용률' : `${viewMonth + 1}월 복용률`;
+    if (labelEl) labelEl.innerText = isCurrentMonthView ? '당월 복용률' : `${baseStats.monthNum}월 복용률`;
   }
 
-  // 4. 기준일로부터 최근 1개월(30일) 복용율
-  let count1M = 0;
-  for (let i = 0; i < 30; i++) {
-    const target = new Date(baseDate);
-    target.setDate(baseDate.getDate() - i);
-    const k = `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, '0')}-${String(target.getDate()).padStart(2, '0')}`;
-    if (intakes[k]) count1M++;
-  }
-  const rate1M = Math.round((count1M / 30) * 100);
+  // 3. 직전 1개월 (기준 월의 바로 전달 1일 ~ 말일: 예: 8월 1일 ~ 8월 31일)
+  const prev1Date = new Date(viewYear, viewMonth - 1, 1);
+  const prev1Stats = getMonthStats(prev1Date.getFullYear(), prev1Date.getMonth(), false);
   const rate1MEl = document.getElementById('rate-1month');
   if (rate1MEl) {
-    rate1MEl.innerText = `${rate1M}%`;
-    rate1MEl.title = `기준일(${formatDate(baseDate)}) 직전 30일 중 ${count1M}일 복용`;
+    rate1MEl.innerText = `${prev1Stats.rate}%`;
+    rate1MEl.title = `${prev1Stats.monthNum}월 전체 ${prev1Stats.takenCount}/${prev1Stats.daysToCount}일 복용`;
+    const labelEl = rate1MEl.previousElementSibling;
+    if (labelEl) labelEl.innerText = `${prev1Stats.monthNum}월 복용률`;
   }
 
-  // 5. 기준일로부터 최근 2개월(60일) 복용율
-  let count2M = 0;
-  for (let i = 0; i < 60; i++) {
-    const target = new Date(baseDate);
-    target.setDate(baseDate.getDate() - i);
-    const k = `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, '0')}-${String(target.getDate()).padStart(2, '0')}`;
-    if (intakes[k]) count2M++;
-  }
-  const rate2M = Math.round((count2M / 60) * 100);
+  // 4. 직전 2개월 (기준 월의 2달 전 1일 ~ 말일: 예: 7월 1일 ~ 7월 31일)
+  const prev2Date = new Date(viewYear, viewMonth - 2, 1);
+  const prev2Stats = getMonthStats(prev2Date.getFullYear(), prev2Date.getMonth(), false);
   const rate2MEl = document.getElementById('rate-2month');
   if (rate2MEl) {
-    rate2MEl.innerText = `${rate2M}%`;
-    rate2MEl.title = `기준일(${formatDate(baseDate)}) 직전 60일 중 ${count2M}일 복용`;
+    rate2MEl.innerText = `${prev2Stats.rate}%`;
+    rate2MEl.title = `${prev2Stats.monthNum}월 전체 ${prev2Stats.takenCount}/${prev2Stats.daysToCount}일 복용`;
+    const labelEl = rate2MEl.previousElementSibling;
+    if (labelEl) labelEl.innerText = `${prev2Stats.monthNum}월 복용률`;
   }
 }
 
