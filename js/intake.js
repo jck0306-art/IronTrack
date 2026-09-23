@@ -15,11 +15,9 @@ export function renderIntakeView() {
   const todayKey = getTodayKey();
   const todayTaken = !!ironData.intakes[todayKey];
 
-  // 오늘 날짜 표시
   const todayDateStrEl = document.getElementById('today-date-str');
   if (todayDateStrEl) todayDateStrEl.innerText = todayKey;
 
-  // 원클릭 복용 버튼 렌더링
   const btn = document.getElementById('today-toggle-btn');
   if (btn) {
     if (todayTaken) {
@@ -31,7 +29,7 @@ export function renderIntakeView() {
     }
   }
 
-  // 스트릭 & 복용률 계산
+  // 스트릭 & 당월 / 1개월 / 2개월 복용율 계산
   calculateStats();
 
   // 달력 렌더링
@@ -50,13 +48,14 @@ export function toggleDateIntake(dateKey, onRender) {
 }
 
 function calculateStats() {
-  // 연속 복용 스트릭 계산
+  const intakes = ironData.intakes || {};
+  const today = new Date();
+
+  // 1. 연속 복용 스트릭 계산
   let streak = 0;
   let checkDate = new Date();
-  
-  // 오늘 아직 안 먹었으면 어제부터 카운트 확인
   const todayKey = getTodayKey();
-  if (!ironData.intakes[todayKey]) {
+  if (!intakes[todayKey]) {
     checkDate.setDate(checkDate.getDate() - 1);
   }
 
@@ -65,26 +64,59 @@ function calculateStats() {
     const m = String(checkDate.getMonth() + 1).padStart(2, '0');
     const d = String(checkDate.getDate()).padStart(2, '0');
     const k = `${y}-${m}-${d}`;
-    if (ironData.intakes[k]) {
+    if (intakes[k]) {
       streak++;
       checkDate.setDate(checkDate.getDate() - 1);
     } else {
       break;
     }
   }
+  const streakEl = document.getElementById('current-streak');
+  if (streakEl) streakEl.innerText = `${streak}일째 🔥`;
 
-  document.getElementById('current-streak').innerText = `${streak}일째 🔥`;
-
-  // 이번 달 복용률
-  const now = new Date();
-  const currentDaysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
-  let takenDaysThisMonth = 0;
-  for (let day = 1; day <= currentDaysInMonth; day++) {
-    const k = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    if (ironData.intakes[k]) takenDaysThisMonth++;
+  // 2. 당월 복용률 (1일 ~ 오늘 기준)
+  let monthTaken = 0;
+  const currentDay = today.getDate();
+  for (let day = 1; day <= currentDay; day++) {
+    const k = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    if (intakes[k]) monthTaken++;
   }
-  const rate = Math.round((takenDaysThisMonth / now.getDate()) * 100) || 0;
-  document.getElementById('month-rate').innerText = `${Math.min(100, rate)}%`;
+  const monthRate = Math.round((monthTaken / currentDay) * 100) || 0;
+  const monthRateEl = document.getElementById('month-rate');
+  if (monthRateEl) {
+    monthRateEl.innerText = `${monthRate}%`;
+    monthRateEl.title = `당월 ${monthTaken}/${currentDay}일 복용`;
+  }
+
+  // 3. 최근 1개월(30일) 복용율
+  let count1M = 0;
+  for (let i = 0; i < 30; i++) {
+    const target = new Date();
+    target.setDate(today.getDate() - i);
+    const k = `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, '0')}-${String(target.getDate()).padStart(2, '0')}`;
+    if (intakes[k]) count1M++;
+  }
+  const rate1M = Math.round((count1M / 30) * 100);
+  const rate1MEl = document.getElementById('rate-1month');
+  if (rate1MEl) {
+    rate1MEl.innerText = `${rate1M}%`;
+    rate1MEl.title = `최근 30일 중 ${count1M}일 복용`;
+  }
+
+  // 4. 최근 2개월(60일) 복용율
+  let count2M = 0;
+  for (let i = 0; i < 60; i++) {
+    const target = new Date();
+    target.setDate(today.getDate() - i);
+    const k = `${target.getFullYear()}-${String(target.getMonth() + 1).padStart(2, '0')}-${String(target.getDate()).padStart(2, '0')}`;
+    if (intakes[k]) count2M++;
+  }
+  const rate2M = Math.round((count2M / 60) * 100);
+  const rate2MEl = document.getElementById('rate-2month');
+  if (rate2MEl) {
+    rate2MEl.innerText = `${rate2M}%`;
+    rate2MEl.title = `최근 60일 중 ${count2M}일 복용`;
+  }
 }
 
 export function changeCalendarMonth(delta, onRender) {
@@ -112,12 +144,10 @@ function renderCalendar() {
 
   let html = '';
 
-  // 빈 칸
   for (let i = 0; i < firstDayIndex; i++) {
     html += `<div class="h-10"></div>`;
   }
 
-  // 날짜 박스
   for (let day = 1; day <= totalDays; day++) {
     const dateKey = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     const isTaken = !!ironData.intakes[dateKey];
