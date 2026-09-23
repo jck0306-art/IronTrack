@@ -1,21 +1,20 @@
-import { initFirebase } from './firebase.js';
+import { initFirebase, ironData } from './firebase.js';
 import { renderIntakeView, toggleTodayIntake, toggleDateIntake, changeCalendarMonth } from './intake.js';
 import { 
   renderLabView, switchChartMetric, openLabModal, closeLabModal, saveLabRecord, deleteLabRecord,
   openMetricsManageModal, closeMetricsManageModal, updateMetricProp, addNewMetricPrompt, deleteMetric
 } from './lab.js';
+import { renderThreeMonthHistory } from './tracker.js';
 import { initAuthGuard, logoutAdmin } from './security.js';
 
 function render() {
   renderIntakeView();
   renderLabView();
-  import { renderThreeMonthHistory } from './tracker.js'; // ❌ 함수 내부에서 import 사용 불가 (문법 오류)
 
-function render() { // ❌ render 함수 중복 선언
-  // ...
-  const records = cloudData.records || {}; // ❌ IronTrack의 데이터 변수는 ironData.intakes 임
-  // ...
-}
+  // 🌟 최근 3개월 히스토리 및 복용율 갱신 (ironData.intakes 연동)
+  const records = (ironData && ironData.intakes) ? ironData.intakes : {};
+  window.ironRecords = records;
+  renderThreeMonthHistory(records);
 }
 
 // 좌측 복용 관리
