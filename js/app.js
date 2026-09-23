@@ -1,20 +1,14 @@
-import { initFirebase, ironData } from './firebase.js';
+import { initFirebase } from './firebase.js';
 import { renderIntakeView, toggleTodayIntake, toggleDateIntake, changeCalendarMonth } from './intake.js';
 import { 
   renderLabView, switchChartMetric, openLabModal, closeLabModal, saveLabRecord, deleteLabRecord,
   openMetricsManageModal, closeMetricsManageModal, updateMetricProp, addNewMetricPrompt, deleteMetric
 } from './lab.js';
-import { renderThreeMonthHistory } from './tracker.js';
 import { initAuthGuard, logoutAdmin } from './security.js';
 
 function render() {
   renderIntakeView();
   renderLabView();
-
-  // 🌟 최근 3개월 히스토리 및 복용율 갱신 (ironData.intakes 연동)
-  const records = (ironData && ironData.intakes) ? ironData.intakes : {};
-  window.ironRecords = records;
-  renderThreeMonthHistory(records);
 }
 
 // 좌측 복용 관리
@@ -39,7 +33,7 @@ window.deleteMetric = idx => deleteMetric(idx, render);
 // 관리자 로그아웃 전역 바인딩
 window.logoutAdmin = logoutAdmin;
 
-// 🌟 로그인 인증 확인 후 안전하게 Firebase DB 로드
+// 로그인 인증 확인 후 안전하게 Firebase DB 로드
 window.addEventListener('DOMContentLoaded', () => {
   initAuthGuard(false, () => {
     initFirebase(render);
