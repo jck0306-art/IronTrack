@@ -9,6 +9,16 @@ import { initAuthGuard, logoutAdmin } from './security.js';
 function render() {
   renderIntakeView();
   renderLabView();
+  import { renderThreeMonthHistory } from './tracker.js';
+
+function render() {
+  // 기존 통계 및 달력 렌더링 코드...
+  
+  // 🌟 최근 3개월 히스토리 및 복용율 갱신 추가
+  const records = cloudData.records || {}; // 저장소 구조에 맞게 연결
+  window.ironRecords = records;
+  renderThreeMonthHistory(records);
+}
 }
 
 // 좌측 복용 관리
